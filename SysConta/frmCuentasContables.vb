@@ -1,0 +1,473 @@
+﻿Imports WindowsApplication1.clsBD
+Imports System.Data.SqlClient
+Imports WindowsApplication1.clsTools
+Imports WindowsApplication1.mdVariables
+Public Class frmCuentasContables
+    Dim modifica As Integer
+    Dim mes As String
+    Dim año As String
+    Dim Fecha As String
+    Private Sub frmCuentasContables_Load(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles MyBase.Load
+        Dim Perfil As String
+        Perfil = "00-05-06"
+
+        If Perfil Like "*" + Perfilesusuario + "*" Then
+            Me.Text = "Mantenimiento Catálogo de Cuentas Contables" + Space(10) + CStr(VersionCont())
+            STBlblUsuario.Text = "||  Usuario Actual : " + LoginUsuario
+
+            Me.MaximizeBox = False
+            VPCatCuentasPuente = ""
+            LlenarListaContable() 
+        Else
+
+            MsgBox("No tiene Derechos Sobre esta Opcion", vbCritical, "Sistema Contable")
+            Me.Close()
+
+        End If
+    End Sub
+
+    Private Sub txtCuentaNiv2_KeyPress(ByVal sender As Object, ByVal e As System.Windows.Forms.KeyPressEventArgs) Handles txtCuentaNiv2.KeyPress
+        If e.KeyChar = ChrW(Keys.Enter) Then
+            e.Handled = True
+            txtCuentaNiv3.Focus()
+        End If
+        REM Valida que solo numero se pueda teclar
+        If Char.IsDigit(e.KeyChar) Or Char.IsControl(e.KeyChar) Or Char.IsSeparator(e.KeyChar) Then
+            e.Handled = False
+        Else
+            e.Handled = True
+        End If
+    End Sub
+
+    Private Sub txtCuentaMayor_KeyPress(ByVal sender As Object, ByVal e As System.Windows.Forms.KeyPressEventArgs) Handles txtCuentaMayor.KeyPress
+        If e.KeyChar = ChrW(Keys.Enter) Then
+            e.Handled = True
+            txtCuentaNiv2.Focus()
+        End If
+        REM Valida que solo numero se pueda teclar
+        If Char.IsDigit(e.KeyChar) Or Char.IsControl(e.KeyChar) Or Char.IsSeparator(e.KeyChar) Then
+            e.Handled = False
+        Else
+            e.Handled = True
+        End If
+    End Sub
+
+    Private Sub BtnBuscar_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles BtnBuscar.Click
+        frmCuentasMaySeg_List.ShowDialog()
+        btnBuscarN2.Enabled = True
+        'txtCuentaMayor.Text = listamayoreo
+        txtCuentaMayor.Text = VPCatCuentasPuente
+        'LlenarListaNiv3()
+        lblCuentaMayor.Text = txtCuentaMayor.Text
+        'listamayoreo = ""
+        LlenarListaContable()
+    End Sub
+
+    Private Sub btnBuscarN2_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnBuscarN2.Click
+        VPCatCuentasPuente = txtCuentaMayor.Text
+        frmCuentasMayTer_List.ShowDialog()
+        btnBuscarN3.Enabled = True
+        txtCuentaNiv2.Text = VPCatCuentasPuente
+        'txtCuentaNiv2.Text = listaN2
+        lblCuentaN2.Text = txtCuentaNiv2.Text
+        'listamayoreo = ""
+        'listaN2 = ""
+        LlenarListaContable()
+    End Sub
+
+    Private Sub txtCuentaContable_KeyPress(ByVal sender As Object, ByVal e As System.Windows.Forms.KeyPressEventArgs) Handles txtCuentaContable.KeyPress
+        If Char.IsDigit(e.KeyChar) Or Char.IsControl(e.KeyChar) Or Char.IsSeparator(e.KeyChar) Then
+            e.Handled = False
+        Else
+            e.Handled = True
+        End If
+
+        If e.KeyChar = ChrW(Keys.Enter) Then
+            e.Handled = True
+            If txtCuentaMayor.Text = "" Or txtCuentaNiv2.Text = "" Or txtCuentaNiv3.Text = "" Or txtCuentaContable.Text = "" Then
+                MsgBox("Se Deben Completar todo los Campos..!!!", vbInformation, "Sistema Contable")
+                Dim limpiar As New clsTools
+
+                limpiar.LimpiarControles(Me)
+                txtCuentaNiv3.Focus()
+            Else
+                BtnBuscar.Enabled = False
+                btnBuscarN2.Enabled = False
+                btnBuscarN3.Enabled = False
+
+                Dim dr As SqlDataReader
+                Dim oclsCuentasContable = New clsCuentasContables()
+                Dim Cuenta As String
+
+                txtCuentaContable.Text = Long.Parse(txtCuentaContable.Text).ToString("0000")
+                Cuenta = txtCuentaMayor.Text + txtCuentaNiv2.Text + txtCuentaNiv3.Text + txtCuentaContable.Text
+                dr = oclsCuentasContable.BuscaContable(Cuenta)
+                'Dim dt = New DataTable()
+                'dt.Rows.Count > 0
+
+                If dr.Read() Then
+
+                    txtDescripcion.Text = dr("descripcion").ToString()
+                    If dr("Naturaleza").ToString() = "A" Then '
+                        cbxNaturaleza.Text = "ACREDORA"
+                    Else
+                        cbxNaturaleza.Text = "DEUDORA"
+                    End If
+
+
+                    If dr("Estatus").ToString() = "1" Then '
+                        cbxEstatus.Text = "ACTIVO"
+                    Else
+                        cbxEstatus.Text = "BAJA"
+                    End If
+
+
+                    txtDescripcion.Enabled = False
+                    BtnGuardar.Enabled = False
+
+                Else
+                    MsgBox("No se encontro registro, Se generara uno Nuevo", vbInformation, "Sistema Contable")
+                    txtDescripcion.Enabled = True
+                    cbxEstatus.Text = ""
+                    cbxNaturaleza.Text = ""
+
+                    txtDescripcion.Focus()
+                    txtDescripcion.Text = ""
+                    BtnGuardar.Enabled = True
+
+                End If
+            End If
+        End If
+        LlenarListaContable()
+    End Sub
+
+    Private Sub txtDescripcion_KeyPress(ByVal sender As Object, ByVal e As System.Windows.Forms.KeyPressEventArgs) Handles txtDescripcion.KeyPress
+        If e.KeyChar = ChrW(Keys.Enter) Then
+            e.Handled = True
+            cbxNaturaleza.Enabled = True
+            cbxEstatus.Enabled = True
+            cbxNaturaleza.Focus()
+        End If
+
+    End Sub
+    Private Sub LlenarListaContable()
+        Dim clsBD As New clsBD()
+
+        Dim dr As SqlDataReader
+        Dim oclsCuentasContables = New clsCuentasContables()
+
+        dr = oclsCuentasContables.SeleccionaContable(Me.txtCuentaContable.Text, Me.txtCuentaNiv3.Text, txtCuentaNiv2.Text, txtCuentaMayor.Text)
+
+        Dim dt = New DataTable()
+        dt.Load(dr)
+        lstCuentasMayor.Items.Clear()
+        If dt.Rows.Count > 0 Then
+            lstCuentasMayor.Items.Clear()
+            For Each rRow As DataRow In dt.Rows
+                Dim lstLista As New ListViewItem(rRow("Cuenta").ToString)
+                lstLista.SubItems.Add(rRow("Descripcion").ToString)
+                lstLista.SubItems.Add(rRow("Naturaleza").ToString)
+                lstLista.SubItems.Add(rRow("Estatus").ToString)
+                lstCuentasMayor.Items.Add(lstLista)
+            Next
+        End If
+
+    End Sub
+
+
+    Private Sub btnNuevo_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnNuevo.Click
+        Dim limpiar As New clsTools
+        limpiar.LimpiarControles(Me)
+        VPCatCuentasPuente = ""
+        TxtBuscar.Text = "Buscar Descripción"
+        TxtBuscar.Font = New System.Drawing.Font("Microsoft Sans Serif", 9.75F, FontStyle.Italic)
+        txtCuentaMayor.Text = ""
+        txtCuentaNiv3.Text = ""
+        txtCuentaNiv2.Text = ""
+        txtDescripcion.Text = ""
+        txtCuentaContable.Text = ""
+        lblCuentaMayor.Text = "- - - -"
+        lblCuentaN2.Text = "- - -"
+        lblCuentaN3.Text = "- - -"
+        cbxEstatus.Text = ""
+        cbxNaturaleza.Text = ""
+        BtnBuscar.Enabled = True
+        btnBuscarN2.Enabled = False
+        btnBuscarN3.Enabled = False
+        LlenarListaContable()
+        BtnBuscar.Focus()
+
+    End Sub
+
+    Private Sub BtnGuardar_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles BtnGuardar.Click
+        If txtCuentaMayor.Text = "" Or txtDescripcion.Text = "" Or txtCuentaNiv2.Text = "" Or txtCuentaNiv3.Text = "" Or cbxEstatus.Text = "" Or cbxNaturaleza.Text = "" Then
+            MsgBox("Debe capturar un numero de cuenta y/o Descripcion..!!!", vbInformation, "Sistema Contable")
+            txtCuentaNiv3.Focus()
+        Else
+           
+            If modifica = 1 Then
+                Dim oclsCuentasContables = New clsCuentasContables()
+                Dim Cuenta As String
+                Dim Naturaleza As String
+                Dim Estatus As String
+
+                If cbxNaturaleza.Text = "ACREDORA" Then
+                    Naturaleza = "A"
+                Else
+                    Naturaleza = "D"
+                End If
+                If cbxEstatus.Text = "ACTIVO" Then
+                    Estatus = 1
+                Else
+                    Estatus = 0
+                End If
+
+                Cuenta = txtCuentaMayor.Text + txtCuentaNiv2.Text + txtCuentaNiv3.Text + txtCuentaContable.Text
+                oclsCuentasContables.ActualizaDescripcionCtacontable(Cuenta, txtDescripcion.Text, Naturaleza, Estatus)
+                MsgBox("Registro Actualizado Correctamente", vbInformation, "Sistema Contable")
+                LlenarListaContable()
+                txtCuentaContable.Enabled = False
+                txtCuentaNiv2.Enabled = False
+                txtCuentaNiv3.Enabled = False
+                txtCuentaMayor.Enabled = False
+                txtDescripcion.Enabled = False
+            Else
+                If MessageBox.Show("¿Desea GUARDAR Registro?", "Atención", MessageBoxButtons.YesNo, MessageBoxIcon.Question) = Windows.Forms.DialogResult.Yes Then
+                    Try
+
+                        Dim clsBD As New clsBD()
+                        Dim Cuenta As String
+                        Dim Naturaleza As String
+                        Dim Estatus As String
+
+
+                        If cbxNaturaleza.Text = "ACREDORA" Then
+                            Naturaleza = "A"
+                        Else
+                            Naturaleza = "D"
+                        End If
+                        If cbxEstatus.Text = "ACTIVO" Then
+                            Estatus = 1
+                        Else
+                            Estatus = 0
+                        End If
+
+
+
+                        Cuenta = txtCuentaMayor.Text + txtCuentaNiv2.Text + txtCuentaNiv3.Text + txtCuentaContable.Text
+
+                        Dim oclsCuentasContable = New clsCuentasContables()
+                        oclsCuentasContable.InsertaCuentaContable(Cuenta, txtDescripcion.Text, Naturaleza, Estatus)
+
+                        'Dim oclsTablaSaldos = New clsCuentasContables()
+                        'oclsTablaSaldos.InsertaTablaSaldos(Cuenta)
+
+                        MsgBox("Registrado Correctamente", vbInformation, "Sistema Contable")
+                        txtCuentaContable.Text = ""
+                        LlenarListaContable()
+                        txtDescripcion.Text = ""
+                        cbxEstatus.Text = ""
+                        cbxNaturaleza.Text = ""
+                        txtCuentaContable.Focus()
+                    Catch ex As Exception
+                        MessageBox.Show(ex.Message)
+                        MsgBox("Ocurrio un Error", vbInformation, "Sistema Contable")
+                    End Try
+                End If
+            End If
+        End If
+    End Sub
+
+    Private Sub BtnEliminar_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles BtnEliminar.Click
+        If txtCuentaNiv3.Text = "" Then
+            MsgBox("Debe capturar un numero de cuenta", vbInformation, "Sistema Contable")
+            txtCuentaNiv3.Focus()
+        Else
+            Dim Cuenta As String
+            Cuenta = txtCuentaMayor.Text + txtCuentaNiv2.Text + txtCuentaNiv3.Text + txtCuentaContable.Text
+            Dim cnnConexion = New SqlConnection()
+            Dim clsDB = New clsBD()
+            cnnConexion = clsDB.CreaConexion()
+            Dim commandbus2 As New SqlCommand("spValidaCuentasContables", cnnConexion)
+            commandbus2.CommandType = CommandType.StoredProcedure
+            commandbus2.Parameters.AddWithValue("@Cuenta", Cuenta)
+            'commandbus2.ExecuteNonQuery()
+            Dim n As Integer
+            n = RTrim(commandbus2.ExecuteScalar())
+            If MessageBox.Show("¿Desea ELIMINAR Registro?", "Atención", MessageBoxButtons.YesNo, MessageBoxIcon.Question) = Windows.Forms.DialogResult.Yes Then
+                If n > 0 Then
+                    Dim oclsCuentasContable = New clsCuentasContables()
+                    oclsCuentasContable.EliminaCuentaContable(txtCuentaMayor.Text, txtCuentaNiv2.Text, txtCuentaNiv3.Text, txtCuentaContable.Text)
+                    MsgBox("Registro Eliminado", vbInformation, "Sistema Contable")
+                    txtCuentaContable.Text = ""
+                    txtDescripcion.Text = ""
+                    cbxEstatus.Text = ""
+                    cbxNaturaleza.Text = ""
+                    LlenarListaContable()
+                    txtCuentaContable.Focus()
+                Else
+                    MsgBox("Esta Cuenta Ya Existe en otros Niveles,No se Puede Eliminar", vbCritical, "Sistema Contable")
+                End If
+            End If
+            End If
+    End Sub
+
+    Private Sub txtCuentaNiv3_TextChanged(ByVal sender As Object, ByVal e As System.EventArgs) Handles txtCuentaNiv3.TextChanged
+        'LlenarListaContable()
+    End Sub
+
+    Private Sub TxtBuscar_GotFocus(ByVal sender As Object, ByVal e As System.EventArgs) Handles TxtBuscar.GotFocus
+        TxtBuscar.Text = ""
+        TxtBuscar.Font = New System.Drawing.Font("Microsoft Sans Serif", 11.0F)
+        TxtBuscar.ForeColor = Color.Black
+    End Sub
+
+    Private Sub TxtBuscar_KeyUp(ByVal sender As Object, ByVal e As System.Windows.Forms.KeyEventArgs) Handles TxtBuscar.KeyUp
+        Dim clsBD As New clsBD()
+
+        Dim dr As SqlDataReader
+        Dim oclsCuentasContable = New clsCuentasContables()
+
+        dr = oclsCuentasContable.BuscaDescripcionCtaContable(Me.TxtBuscar.Text)
+
+        Dim dt = New DataTable()
+        dt.Load(dr)
+
+        'If dt.Rows.Count > 0 Then
+        lstCuentasMayor.Items.Clear()
+        For Each rRow As DataRow In dt.Rows
+            Dim lstLista As New ListViewItem(rRow("Cuenta").ToString)
+            lstLista.SubItems.Add(rRow("Descripcion").ToString)
+            lstLista.SubItems.Add(rRow("Naturaleza").ToString)
+            lstLista.SubItems.Add(rRow("Estatus").ToString)
+            lstCuentasMayor.Items.Add(lstLista)
+        Next
+    End Sub
+
+    Private Sub btnBuscarN3_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnBuscarN3.Click
+        VPCatCuentasPuente = Trim(Me.txtCuentaMayor.Text) + Trim(Me.txtCuentaNiv2.Text)
+        frmCuentasContables_List.ShowDialog()
+        txtCuentaNiv3.Text = VPCatCuentasPuente
+        lblCuentaN3.Text = txtCuentaNiv3.Text
+        txtCuentaContable.Focus()
+        BtnGuardar.Enabled = True
+        BtnEliminar.Enabled = True
+        txtCuentaContable.Enabled = True
+        LlenarListaContable()
+        'listamayoreo = ""
+        'listaN2 = ""
+        'listaN3 = ""
+    End Sub
+
+    Private Sub txtBuscarContable_KeyPress(ByVal sender As Object, ByVal e As System.Windows.Forms.KeyPressEventArgs) Handles txtBuscarContable.KeyPress
+        If Char.IsDigit(e.KeyChar) Or Char.IsControl(e.KeyChar) Or Char.IsSeparator(e.KeyChar) Then
+            e.Handled = False
+        Else
+            e.Handled = True
+        End If
+        'lstCuentasMayor.Clear()
+
+    End Sub
+
+    Private Sub txtBuscarContable_KeyUp(ByVal sender As Object, ByVal e As System.Windows.Forms.KeyEventArgs) Handles txtBuscarContable.KeyUp
+
+        Dim clsBD As New clsBD()
+
+        Dim dr As SqlDataReader
+        Dim oclsCuentasContables = New clsCuentasContables()
+
+        dr = oclsCuentasContables.SeleccionaBuscarContable(Me.txtBuscarContable.Text)
+
+        Dim dt = New DataTable()
+        dt.Load(dr)
+
+        If dt.Rows.Count > 0 Then
+            lstCuentasMayor.Items.Clear()
+            For Each rRow As DataRow In dt.Rows
+                Dim lstLista As New ListViewItem(rRow("Cuenta").ToString)
+                lstLista.SubItems.Add(rRow("Descripcion").ToString)
+                lstLista.SubItems.Add(rRow("Naturaleza").ToString)
+                lstLista.SubItems.Add(rRow("Estatus").ToString)
+                lstCuentasMayor.Items.Add(lstLista)
+            Next
+        End If
+    End Sub
+
+    Private Sub btnImprimir_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnImprimir.Click
+        Dim frm As New frmRPTInfCuentas
+        frm.Show()
+    End Sub
+
+    Private Sub btnSalir_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnSalir.Click
+        Me.Close()
+    End Sub
+
+    Private Sub lstCuentasMayor_MouseDoubleClick(ByVal sender As Object, ByVal e As System.Windows.Forms.MouseEventArgs) Handles lstCuentasMayor.MouseDoubleClick
+
+        If Trim(lstCuentasMayor.SelectedItems(0).SubItems(0).Text).Length = 14 Then
+
+            txtCuentaMayor.Text = Mid((Trim(lstCuentasMayor.SelectedItems(0).SubItems(0).Text)), 1, 4)
+            txtCuentaNiv2.Text = Mid((Trim(lstCuentasMayor.SelectedItems(0).SubItems(0).Text)), 5, 3)
+            txtCuentaNiv3.Text = Mid((Trim(lstCuentasMayor.SelectedItems(0).SubItems(0).Text)), 8, 3)
+            txtCuentaContable.Text = Mid((Trim(lstCuentasMayor.SelectedItems(0).SubItems(0).Text)), 11, 4)
+            txtDescripcion.Text = Trim(lstCuentasMayor.SelectedItems(0).SubItems(1).Text)
+            lblCuentaMayor.Text = txtCuentaMayor.Text
+            lblCuentaN2.Text = txtCuentaNiv2.Text
+            lblCuentaN3.Text = txtCuentaNiv3.Text
+
+
+
+            If lstCuentasMayor.SelectedItems(0).SubItems(2).Text = "D" Then
+                cbxNaturaleza.Text = "DEUDORA"
+            Else
+                cbxNaturaleza.Text = "ACREDORA"
+            End If
+
+            If lstCuentasMayor.SelectedItems(0).SubItems(3).Text = "1" Then
+                cbxEstatus.Text = "ACTIVO"
+            Else
+                cbxEstatus.Text = "BAJA"
+            End If
+
+            BtnModificar.Enabled = True
+            BtnEliminar.Enabled = True
+            txtCuentaContable.Enabled = False
+            txtCuentaNiv2.Enabled = False
+            txtCuentaNiv3.Enabled = False
+            txtCuentaMayor.Enabled = False
+            txtDescripcion.Enabled = False
+            cbxNaturaleza.Enabled = False
+            cbxEstatus.Enabled = False
+
+        Else
+            txtCuentaMayor.Text = ""
+            txtCuentaNiv2.Text = ""
+            txtCuentaNiv3.Text = ""
+            txtCuentaContable.Text = ""
+            txtDescripcion.Text = ""
+            lblCuentaMayor.Text = ""
+            lblCuentaN2.Text = ""
+            lblCuentaN3.Text = ""
+            cbxEstatus.Text = ""
+            cbxNaturaleza.Text = ""
+        End If
+
+    End Sub
+
+    Private Sub BtnModificar_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles BtnModificar.Click
+        If txtCuentaMayor.Text = "" Or txtCuentaNiv2.Text = "" Or txtCuentaNiv3.Text = "" Or txtCuentaContable.Text = "" Or txtDescripcion.Text = "" Then
+            MsgBox("Debe Completar Todos los Campos..!!!", vbInformation, "Sistema Contable")
+            txtBuscarContable.Focus()
+        Else
+            If MessageBox.Show("¿Desea ACTUALIZAR Registro?", "Atención", MessageBoxButtons.YesNo, MessageBoxIcon.Question) = Windows.Forms.DialogResult.Yes Then
+
+                modifica = 1
+                txtDescripcion.Enabled = True
+                cbxEstatus.Enabled = True
+                cbxNaturaleza.Enabled = True
+                BtnGuardar.Enabled = True
+                BtnModificar.Enabled = False
+            End If
+        End If
+    End Sub
+End Class
